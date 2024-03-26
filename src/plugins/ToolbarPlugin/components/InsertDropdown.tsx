@@ -29,6 +29,11 @@ export type UploadImageHandler = (
   file: any
 ) => Promise<{ url: string }> | { url: string };
 
+export type MaximumSize = {
+  sizeInBytes: number;
+  sizeString?: string;
+};
+
 const parseYouTubeVideoID = (url: string) => {
   const urlMatches = url.match(YOUTUBE_ID_PARSER);
 
@@ -41,11 +46,13 @@ function InsertImageDialog({
   onClose,
   uploadImage,
   supportType,
+  maximumSize,
 }: {
   activeEditor: LexicalEditor;
   onClose: () => void;
   uploadImage: UploadImageHandler;
   supportType?: string;
+  maximumSize: MaximumSize;
 }): JSX.Element {
   const [mode, setMode] = useState<null | 'url' | 'file'>(null);
 
@@ -78,6 +85,7 @@ function InsertImageDialog({
           supportType={supportType}
           uploadImage={uploadImage}
           onClick={onClick}
+          maximumSize={maximumSize}
         />
       )}
     </>
@@ -218,23 +226,30 @@ function InsertImageUploadedDialogBody({
   onClick,
   uploadImage,
   supportType,
+  maximumSize,
 }: {
   onClick: (payload: InsertImagePayload) => void;
   uploadImage: UploadImageHandler;
   supportType: string;
+  maximumSize?: MaximumSize;
 }) {
   const [src, setSrc] = useState('');
   const [altText, setAltText] = useState('');
   const isDisabled = src === '';
-
+  const [isInvalidFileSize, setIsInvalidFileSize] = useState(false);
   const loadImage = async (files: FileList) => {
     const reader = new FileReader();
+    const file = files[0];
     if (uploadImage) {
-      if (files) {
-        const result = await uploadImage(files[0]);
-        setSrc(result.url);
+      if (file) {
+        if (file.size <= maximumSize.sizeInBytes) {
+          const result = await uploadImage(file);
+          setSrc(result.url);
+          return;
+        } else {
+          setIsInvalidFileSize(true);
+        }
       }
-      return;
     } else {
       reader.onload = function () {
         if (typeof reader.result === 'string') {
@@ -261,6 +276,14 @@ function InsertImageUploadedDialogBody({
         value={altText}
         data-test-id="image-modal-alt-text-input"
       />
+
+      {isInvalidFileSize && (
+        <p style={{ color: '#eb4748' }}>
+          The file you uploaded is too large. The maximum allowed size is{' '}
+          {maximumSize?.sizeString}
+        </p>
+      )}
+
       <div className="ToolbarPlugin__dialogActions">
         <Button
           data-test-id="image-modal-file-upload-btn"
@@ -329,6 +352,7 @@ export interface IInsertDropdownProps {
   enableStickyNote?: boolean;
   supportType?: string;
   uploadImage?: UploadImageHandler;
+  maximumSize?: MaximumSize;
 }
 
 const InsertDropdown: React.FC<IInsertDropdownProps> = ({
@@ -341,6 +365,10 @@ const InsertDropdown: React.FC<IInsertDropdownProps> = ({
   enableStickyNote = false,
   supportType,
   uploadImage,
+  maximumSize = {
+    sizeInBytes: 2 * 1024 * 1024,
+    sizeString: '2mb',
+  },
 }: IInsertDropdownProps) => {
   const { initialEditor, activeEditor } = useContext(EditorContext);
   const [modal, showModal] = useModal();
@@ -388,6 +416,7 @@ const InsertDropdown: React.FC<IInsertDropdownProps> = ({
                 <InsertImageDialog
                   supportType={supportType}
                   uploadImage={uploadImage}
+                  maximumSize={maximumSize}
                   activeEditor={activeEditor}
                   onClose={onClose}
                 />
