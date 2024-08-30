@@ -8,8 +8,8 @@
 
 import './ColorPicker.css';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
 import * as React from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import DropDown from './DropDown';
 
@@ -52,6 +52,7 @@ export default function ColorPicker({
   ...rest
 }: Readonly<ColorPickerProps>): JSX.Element {
   const [selfColor, setSelfColor] = useState(transformColor('hex', color));
+  const [dropDownOpen, setDropDownOpen] = useState(false);
 
   const saturationPosition = useMemo(
     () => ({
@@ -81,7 +82,6 @@ export default function ColorPicker({
   const onMoveHue = ({ x }: Position) => {
     const newHsv = { ...selfColor.hsv, h: (x / WIDTH) * 360 };
     const newColor = transformColor('hsv', newHsv);
-
     setSelfColor(newColor);
   };
 
@@ -95,7 +95,12 @@ export default function ColorPicker({
   }, [color]);
 
   return (
-    <DropDown {...rest} stopCloseOnClickSelf={true}>
+    <DropDown
+      {...rest}
+      stopCloseOnClickSelf={true}
+      open={dropDownOpen}
+      onClose={setDropDownOpen}
+    >
       <div className="color-picker-wrapper" style={{ width: WIDTH }}>
         <div className="color-picker-basic-color">
           {basicColors.map((basicColor) => (
@@ -103,7 +108,10 @@ export default function ColorPicker({
               className={basicColor === selfColor.hex ? ' active' : ''}
               key={basicColor}
               style={{ backgroundColor: basicColor }}
-              onClick={() => setSelfColor(transformColor('hex', basicColor))}
+              onClick={() => {
+                setSelfColor(transformColor('hex', basicColor));
+                setDropDownOpen(false);
+              }}
               type="button"
             />
           ))}
