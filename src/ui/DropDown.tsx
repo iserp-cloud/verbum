@@ -6,8 +6,8 @@
  *
  */
 
-import { useEffect, useRef, useState } from 'react';
 import * as React from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 export default function DropDown({
@@ -17,6 +17,8 @@ export default function DropDown({
   buttonIconClassName,
   children,
   stopCloseOnClickSelf,
+  open = false,
+  onClose,
 }: {
   buttonAriaLabel?: string;
   buttonClassName: string;
@@ -24,6 +26,8 @@ export default function DropDown({
   buttonLabel?: string;
   children: JSX.Element | string | (JSX.Element | string)[];
   stopCloseOnClickSelf?: boolean;
+  open?: boolean;
+  onClose?: React.Dispatch<React.SetStateAction<boolean>>;
 }): JSX.Element {
   const dropDownRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
@@ -53,6 +57,7 @@ export default function DropDown({
           if (dropDownRef.current.contains(target as Node)) return;
         }
         if (!button.contains(target as Node)) {
+          onClose?.(false);
           setShowDropDown(false);
         }
       };
@@ -64,12 +69,19 @@ export default function DropDown({
     }
   }, [dropDownRef, buttonRef, showDropDown, stopCloseOnClickSelf]);
 
+  useEffect(() => {
+    setShowDropDown(open);
+  }, [open]);
+
   return (
     <>
       <button
         aria-label={buttonAriaLabel || buttonLabel}
         className={buttonClassName}
-        onClick={() => setShowDropDown(!showDropDown)}
+        onClick={() => {
+          setShowDropDown(!showDropDown);
+          onClose?.((prev) => !prev);
+        }}
         ref={buttonRef}
         type="button"
       >
